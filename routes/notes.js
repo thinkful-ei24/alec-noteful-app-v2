@@ -87,27 +87,22 @@ router.post('/', (req, res, next) => {
     return next(err);
   }
 
-  notes.create(newItem)
-    .then(item => {
-      if (item) {
-        res.location(`http://${req.headers.host}/notes/${item.id}`).status(201).json(item);
-      }
+  knex('notes')
+    .insert({title: req.body.title, content: req.body.content})
+    .then(response=>{
+      res.json(response);
     })
-    .catch(err => {
-      next(err);
-    });
+    .catch( err => console.log( err ) );
 });
 
 // Delete an item
 router.delete('/:id', (req, res, next) => {
   const id = req.params.id;
-
-  notes.delete(id)
-    .then(() => {
+  knex('notes')
+    .where({id: id})
+    .delete()
+    .then(response=>{
       res.sendStatus(204);
     })
-    .catch(err => {
-      next(err);
-    });
 });
 module.exports = router;
