@@ -125,6 +125,23 @@ const noteful = (function () {
     });
   }
 
+  function handleFolderClick() {
+    $('.js-folders-list').on('click', '.js-folder-link', event => {
+      event.preventDefault();
+
+      const folderId = getFolderIdFromElement(event.currentTarget);
+      store.currentQuery.folderId = folderId;
+      if (folderId !== store.currentNote.folderId) {
+        store.currentNote = {};
+      }
+
+      api.search('/api/notes', store.currentQuery).then(response => {
+        store.notes = response;
+        render();
+      });
+    });
+  }
+
   function handleNoteSearchSubmit() {
     $('.js-notes-search-form').on('submit', event => {
       event.preventDefault();
@@ -176,6 +193,45 @@ const noteful = (function () {
       }
     });
   }
+  function handleNewFolderSubmit(){
+      $('.js-new-folder-form').on('submit', event => {
+          event.preventDefault();
+           const newFolderName = $('.js-new-folder-entry').val();
+           api.create('/api/folders', { name: newFolderName })
+        .then(() => {
+          $('.js-new-folder-entry').val();
+          return api.search('/api/folders');
+        }).then(response => {
+          store.folders = response;
+          render();
+        }).catch(err => {
+          $('.js-error-message').text(err.responseJSON.message);
+        });
+      });
+  }
+
+  function handleFolderDeleteClick() {
+  $('.js-folders-list').on('click', '.js-folder-delete', event => {
+    event.preventDefault();
+    const folderId = getFolderIdFromElement(event.currentTarget);
+
+    if (folderId === store.currentQuery.folderId) {
+      store.currentQuery.folderId = null;
+    }
+    if (folderId === store.currentNote.folderId) {
+      store.currentNote = {};
+    }
+
+    api.remove(`/api/folders/${folderId}`)
+      .then(() => {
+        return api.search('/api/folders');
+      })
+      .then(response => {
+        store.folders = response;
+        render();
+      });
+  });
+}
 
   function handleNoteStartNewSubmit() {
     $('.js-start-new-note-form').on('submit', event => {
@@ -233,16 +289,16 @@ const noteful = (function () {
       const newFolderName = $('.js-new-folder-entry').val();
 
       console.info('Create a folder, coming soon...');
-      // api.create('/api/folders', { name: newFolderName })
-      //   .then(() => {
-      //     $('.js-new-folder-entry').val();
-      //     return api.search('/api/folders');
-      //   }).then(response => {
-      //     store.folders = response;
-      //     render();
-      //   }).catch(err => {
-      //     $('.js-error-message').text(err.responseJSON.message);
-      //   });
+      api.create('/api/folders', { name: newFolderName })
+        .then(() => {
+          $('.js-new-folder-entry').val();
+          return api.search('/api/folders');
+        }).then(response => {
+          store.folders = response;
+          render();
+        }).catch(err => {
+          $('.js-error-message').text(err.responseJSON.message);
+        });
     });
   }
 
@@ -259,14 +315,14 @@ const noteful = (function () {
       }
 
       console.info('Delete a folder, coming soon...');
-      // api.remove(`/api/folders/${folderId}`)
-      //   .then(() => {
-      //     return api.search('/api/folders');
-      //   })
-      //   .then(response => {
-      //     store.folders = response;
-      //     render();
-      //   });
+      api.remove(`/api/folders/${folderId}`)
+        .then(() => {
+          return api.search('/api/folders');
+        })
+        .then(response => {
+          store.folders = response;
+          render();
+        });
     });
   }
 

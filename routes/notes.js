@@ -14,34 +14,43 @@ const knex = require('../knex');
 // Get All (and search by query)
 router.get('/', (req, res, next) => {
   const { searchTerm } = req.query;
-  knex
-  .select('notes.id', 'title', 'content')
+  knex.select('notes.id', 'title', 'content', 'folders.id as folderId', 'folders.name as folderName')
   .from('notes')
+  .leftJoin('folders', 'notes.folder_id', 'folders.id')
   .modify(function (queryBuilder) {
     if (searchTerm) {
       queryBuilder.where('title', 'like', `%${searchTerm}%`);
     }
   })
+
   .orderBy('notes.id')
   .then(results => {
-    console.log(JSON.stringify(results, null, 2));
     res.json(results);
   })
-  .catch(err => {
-    console.error(err);
-  });
+  .catch(err => next(err));
 });
 
 // Get a single item
 router.get('/:id', (req, res, next) => {
   const id = req.params.id;
-
-  knex
-    .select('notes.id', 'title', 'content')
-    .from('notes')
-    .where({id: id})
-    .then(results => res.json(results))
-    .catch( err => console.log( err ) );
+  knex.select('notes.id', 'title', 'content', 'folders.id as folderId', 'folders.name as folderName')
+  .from('notes')
+  .leftJoin('folders', 'notes.folder_id', 'folders.id')
+  .modify(function (queryBuilder) {
+    if (searchTerm) {
+      queryBuilder.where('title', 'like', `%${searchTerm}%`);
+    }
+  })
+    .modify(function (queryBuilder) {
+      if (searchTerm) {
+        queryBuilder.where('name', 'like', `%${searchTerm}%`);
+      }
+    })
+  .orderBy('notes.id')
+  .then(results => {
+    res.json(results);
+  })
+  .catch(err => next(err));
 });
 //
 // // Put update an item
@@ -77,22 +86,34 @@ router.put('/:id', (req, res, next) => {
 
 // Post (insert) an item
 router.post('/', (req, res, next) => {
-  const { title, content } = req.body;
+  const { title, content, folderId } = req.body; // Add `folderId` to object destructure
+  /*
+  REMOVED FOR BREVITY
+  */
+  const newItem = {
+    title: title,
+    content: content,
+    folder_id: folderId  // Add `folderId`
+  };
 
-  const newItem = { title, content };
-  /***** Never trust users - validate input *****/
-  if (!newItem.title) {
-    const err = new Error('Missing `title` in request body');
-    err.status = 400;
-    return next(err);
-  }
+  let noteId;
 
-  knex('notes')
-    .insert({title: req.body.title, content: req.body.content})
-    .then(response=>{
-      res.json(response);
+  // Insert new note, instead of returning all the fields, just return the new `id`
+  knex.insert(newItem)
+    .into('notes')
+    .returning('id')
+    .then(([id]) => {
+      noteId = id;
+      // Using the new id, select the new note and the folder
+      return knex.select('notes.id', 'title', 'content', 'folder_id as folderId', 'folders.name as folderName')
+        .from('notes')
+        .leftJoin('folders', 'notes.folder_id', 'folders.id')
+        .where('notes.id', noteId);
     })
-    .catch( err => console.log( err ) );
+    .then(([result]) => {
+      res.location(`${req.originalUrl}/${result.id}`).status(201).json(result);
+    })
+    .catch(err => next(err));
 });
 
 // Delete an item
