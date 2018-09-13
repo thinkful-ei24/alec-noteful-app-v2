@@ -1,22 +1,34 @@
 
+DROP TABLE IF EXISTS notes_tags;
+DROP TABLE IF EXISTS tags;
+DROP TABLE IF EXISTS notes;
 DROP TABLE IF EXISTS folders;
 CREATE TABLE folders (
     id serial PRIMARY KEY,
     name text NOT NULL
 );
+CREATE TABLE tags (
+  id serial PRIMARY KEY,
+  name text NOT NULL
+);
+
 ALTER SEQUENCE folders_id_seq RESTART WITH 1000;
 INSERT INTO folders (name) VALUES
   ('aFolderIMade'),
   ('drafts'),
   ('drafts');
 
-DROP TABLE IF EXISTS notes;
 CREATE TABLE notes (
   id serial PRIMARY KEY,
   title text NOT NULL,
   content text,
   created timestamp DEFAULT now(),
   folder_id int REFERENCES folders(id) ON DELETE SET NULL
+);
+
+CREATE TABLE notes_tags (
+  note_id INTEGER NOT NULL REFERENCES notes ON DELETE CASCADE,
+  tag_id INTEGER NOT NULL REFERENCES tags ON DELETE CASCADE
 );
 
 ALTER SEQUENCE notes_id_seq RESTART WITH 1000;
